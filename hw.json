@@ -1,0 +1,8 @@
+{
+    "wifi_retry_timeout" : 5000,
+    "ap_retry_timeout" : 5000,
+    "rgb_port" : "B",
+    "rgb_pins" : [3,4,2],
+    "button_port" : "A",
+    "button_pin" : 0
+}

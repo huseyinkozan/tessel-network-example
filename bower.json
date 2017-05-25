@@ -1,0 +1,29 @@
+{
+  "name": "tessel-network-example",
+  "description": "Tessel network example",
+  "main": "index.js",
+  "authors": [
+    "Hüseyin Kozan <posta@huseyinkozan.com.tr>"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "Tessel"
+  ],
+  "homepage": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "semantic-nogooglefonts": "^12.2.4",
+    "jquery": "^3.2.1",
+    "toastr": "^2.1.3"
+  },
+  "resolutions": {
+    "jquery": "^3.2.1"
+  }
+}

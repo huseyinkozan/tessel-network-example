@@ -1,0 +1,8 @@
+database/
+public/
+bower_components/jquery/dist/jquery.min.js
+bower_components/semantic-nogooglefonts/dist/semantic.min.css
+bower_components/semantic-nogooglefonts/dist/semantic.min.js
+bower_components/semantic-nogooglefonts/dist/themes/default/
+bower_components/toastr/toastr.js
+bower_components/toastr/toastr.css

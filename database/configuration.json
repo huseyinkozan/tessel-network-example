@@ -1,0 +1,12 @@
+{
+    "timestamp": 0,
+    "wifi": {
+        "enabled": false,
+        "ssid": "",
+        "password": "",
+        "security": "none"
+    },
+    "ap": {
+        "ssid": "Tessel"
+    }
+}

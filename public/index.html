@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tessel Network</title>
+
+  <script src="assets/jquery/dist/jquery.min.js" charset="utf-8"></script>
+
+  <link rel="stylesheet" href="assets/toastr/toastr.css">
+  <script src="assets/toastr/toastr.js" charset="utf-8"></script>
+
+  <link rel="stylesheet" type="text/css" href="assets/semantic-nogooglefonts/dist/semantic.min.css">
+  <script src="assets/semantic-nogooglefonts/dist/semantic.min.js" charset="utf-8"></script>
+
+  <link rel="stylesheet" href="index.css">
+  <script type="text/javascript" src="common.js"></script>
+  <script type="text/javascript" src="index.js"></script>
+
+</head>
+<body>
+
+  <div class="ui center aligned grid">
+    <div class="column">
+
+      <div id="segment" class="ui raised text container left aligned segment">
+
+        <div class="ui form">
+
+          <h4 class="ui center aligned header">Connection</h4>
+          <div class="ui basic segment">
+            <h4 class="ui dividing header">Access Point</h4>
+            <div class="two fields">
+              <div id="settings-ap-ssid-div" class="field">
+                <label>Name</label>
+                <input id="settings-ap-ssid" type="text">
+              </div>
+              <div class="field">
+                <div class="ui floating yellow message">
+                  Visible Wifi name (SSID) when you scan your network
+                  from mobile or computer.<br>
+                  Note: You will need to connect the new name!
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <h4 class="ui dividing header">Wifi</h4>
+
+          <div class="three fields">
+            <div class="six wide field">
+              <div id="settings-wifi-enabled-div" class="ui right floated toggle checkbox">
+                <input id="settings-wifi-enabled" type="checkbox" tabindex="0" class="hidden">
+                <label for="settings-wifi-enabled">Enable</label>
+              </div>
+            </div>
+            <div class="two wide field">
+              <button id="settings-wifi-help" class="ui button">Help</button>
+            </div>
+            <div class="eight wide field">
+              <div class="ui floating red message">
+                Please see the explanations at the Help page before enable the Wifi!
+              </div>
+            </div>
+          </div>
+
+          <div id="settings-wifi-ssid-div" class="field">
+            <label>Network</label>
+            <div class="ui stackable grid">
+              <div class="two wide column" style="padding-right:0">
+                <button id="settings-wifi-scan" onClick="return scan_wifi();" class="ui blue button">Scan</button>
+              </div>
+              <div class="fourteen wide column">
+                <div id="settings-wifi-ssid-dd" class="ui fluid search selection dropdown">
+                  <input type="hidden" id="settings-wifi-ssid-dd-input" value="">
+                  <i class="dropdown icon"></i>
+                  <div class="default text">Select or manually enter SSID</div>
+                  <div  id="settings-wifi-ssid-dd-menu" class="menu">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="two fields">
+            <div id="settings-wifi-password-div" class="field">
+              <label>Password</label>
+              <div class="ui icon input">
+                <input autocomplete="off" id="settings-wifi-password" type="password">
+                <i onClick="settings_wifi_password_unhide();" class="inverted circular unhide link icon"></i>
+              </div>
+            </div>
+            <div id="settings-wifi-security-div" class="field">
+              <label>Security</label>
+              <select id="settings-wifi-security" class="ui dropdown">
+                <option value="none">None</option>
+                <option value="psk2">WPA2 Personal</option>
+                <option value="psk">WPA Personal</option>
+                <option value="wpa2">WPA2 Enterprise</option>
+                <option value="wpa">WPA Enterprise</option>
+                <option value="wep">WEP</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="ui grid">
+              <div class="right aligned column">
+                <div id="settings-reset" class="ui button">
+                  <i class="undo icon"></i>
+                  Reset
+                </div>
+                <div id="settings-save" class="ui green button">
+                  <i class="save icon"></i>
+                  Save
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div> <!-- form -->
+
+      </div> <!-- segment -->
+
+    </div>
+  </div> <!-- grid -->
+
+  <div id="loading-dialog" class="ui page dimmer">
+    <div class="content">
+      <div class="center">
+        <h2 class="ui inverted icon header">
+          <i class="spinner icon"></i>
+          <span id="loading-header">No Connection</span>
+        </h2>
+        <div id="loading-msg">Please check your connection !</div>
+      </div>
+    </div>
+  </div> <!-- loading-dialog -->
+
+
+  <div id="wifi-desc-dialog" class="ui modal">
+    <div class="content">
+      <div class="ui segment">
+        <div class="ui items">
+          <div class="item">
+            <div class="content">
+              <a class="header">Accessing the Page</a>
+              <div class="description">
+                <p>
+                  At Access Point mode (default):
+                  <ul>
+                    <li>Connect to <em>Tessel</em> wireless network.</li>
+                    <li>Open <a>http://192.168.1.101</a> address at your browser.</li>
+                  </ul>
+                  At Wifi mode:
+                  <ul>
+                    <li>Connect to same Wifi network with your device.</li>
+                    <li>Press the button less than 3 seconds on your device.</li>
+                    <li>Open the IP address that you find from inspection (for ex: <a href="https://play.google.com/store/apps/details?id=com.overlook.android.fing" target="_blank">fing</a>) at your browser.</li>
+                  </ul>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="item">
+            <div class="content">
+              <a class="header">Switch Between Wifi and AP</a>
+              <div class="description">
+                <p>
+                  To switch between Access Point and Wifi mode press the button for 3 seconds.<br>
+                  LED color codes:
+                  <ul>
+                    <li><span class="green led">Green</span> : Access Point active</li>
+                    <li><span class="yellow led blink">Blinking Yellow</span> : Wifi active and trying to connect</li>
+                    <li><span class="yellow led">Yellow</span> : Wifi active and connected</li>
+                    <li><span class="white led">White</span> : Reset connection settings</li>
+                  </ul>
+                  Note : If Wifi name is empty, mode will not switch to Wifi !
+                </p>
+              </div>
+              <div class="extra">
+                <i class="yellow large info circle icon"></i>
+                Press button at least 3 sec to switch AP/Wifi
+              </div>
+            </div>
+          </div>
+          <div class="item">
+            <div class="content">
+              <a class="header">Reset Connection Settings</a>
+              <div class="description">
+                <p>
+                  You can reset the AP mode, Wifi settings and password by pressing the button for 10 seconds.
+                </p>
+              </div>
+              <div class="extra">
+                <i class="red large info circle icon"></i>
+                Press button for 10 sec to reset connection settings
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="actions">
+      <div class="ui ok button">close</div>
+    </div>
+  </div> <!-- wifi-desc-dialog -->
+
+
+</body>
+</html>

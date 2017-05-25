@@ -1,0 +1,8 @@
+{
+  "fun"           : true,
+  "fun_leds"      : false,
+  "req"           : true,
+  "req_timestamps": false,
+  "button"        : true,
+  "other"         : true
+}

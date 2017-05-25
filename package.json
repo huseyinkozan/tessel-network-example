@@ -1,0 +1,32 @@
+{
+  "name": "tessel-network-example",
+  "version": "0.0.1",
+  "description": "Tessel network example",
+  "main": "index.js",
+  "engines": {
+    "node": ">=6.x"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "github.com/huseyinkozan/tessel-network-example",
+  "keywords": [
+    "Tessel",
+    "Network",
+    "Example"
+  ],
+  "author": "Hüseyin Kozan <posta@huseyinkozan.com.tr> (https://huseyinkozan.com.tr/)",
+  "license": "MIT",
+  "readme": "Readme.md",
+  "dependencies": {
+    "body-parser": "^1.17.2",
+    "express": "^4.15.3",
+    "morgan": "^1.8.2",
+    "node-json-db": "^0.7.3",
+    "touch": "^1.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^3.19.0",
+    "eslint-plugin-node": "^4.2.2"
+  }
+}
