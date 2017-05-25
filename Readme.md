@@ -1,5 +1,6 @@
 # Tessel Network Example
 
+![Screenshot](screenshot.png)
 
 ## Install Requirements
 
