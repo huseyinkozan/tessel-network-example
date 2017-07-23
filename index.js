@@ -91,6 +91,7 @@ app.put("/api/wifi", function(req, res) {
     }
     var jsonDB = new JsonDB(req.app.locals.dbPath+"/configuration.json", false, true);
     jsonDB.push("/wifi", req.body);
+    jsonDB.push("/wifi/enabled", true);
     jsonDB.save();
     var config = jsonDB.getData("/");
     hw.configuration_changed(config);
@@ -117,6 +118,7 @@ app.put("/api/ap", function(req, res) {
     }
     var jsonDB = new JsonDB(req.app.locals.dbPath+"/configuration.json", false, true);
     jsonDB.push("/ap", req.body);
+    jsonDB.push("/wifi/enabled", false);
     jsonDB.save();
     var config = jsonDB.getData("/");
     hw.configuration_changed(config);

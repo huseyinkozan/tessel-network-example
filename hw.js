@@ -15,9 +15,18 @@ try {
 let dbPath = null;
 let d = { configuration : null };
 let states = {
-  button_counter : 0, led_toggle : false, is_wifi_connected : false, last_wifi_error : ""
+  button_counter : 0, led_toggle : false, is_wifi_connected : false, last_wifi_error : "",
+  user_touched : false,
 };
 let timers = { button : null, wifi : null, ap : null };
+let fakeWifiList = [
+  {"ssid":"None security Network","quality":"10/70","security":"none"},
+  {"ssid":"WPA2 Personal Network","quality":"60/70","security":"psk2"},
+  {"ssid":"WPA Personal Network","quality":"40/70","security":"psk"},
+  {"ssid":"WPA2 Ent Network","quality":"40/70","security":"wpa2"},
+  {"ssid":"WPA Ent Network","quality":"40/70","security":"wpa"},
+  {"ssid":"WEP Network","quality":"40/70","security":"wep"},
+];
 
 function Hw() {
   if (g_debug.fun) { console.log("Hw();"); }
@@ -27,7 +36,8 @@ Hw.prototype.setDBPath = function (path) {
   if (g_debug.fun) { console.log("setDBPath("+path+");"); }
   dbPath = path;
   loadData("configuration", "configuration.json");
-  setupWireless(false);
+  setupTessel();
+  setupWireless();
   setupButtonsAndLeds();
 };
 
@@ -47,20 +57,19 @@ Hw.prototype.is_wifi_connected = function() {
 };
 
 Hw.prototype.wifi_list = function(cb) {
-  if (g_debug.fun) { console.log("wifi_list(cb); cb:", cb); }
+  if (g_debug.fun) { console.log("wifi_list(cb);"); }
   wifiList(cb);
 };
 
 Hw.prototype.setup_wireless = function() {
   if (g_debug.fun) { console.log("setup_wireless();"); }
   if (tessel === null) { return; }
-  setTimeout(function () {
-    setupWireless(true);
-  }, 1000);
+  states.user_touched = true;
+  setTimeout(setupWireless, 1000);
 };
 
 Hw.prototype.configuration_changed = function(configuration) {
-  if (g_debug.fun) { console.log("Hw::configuration_changed(config); config: ", configuration); }
+  if (g_debug.fun) { console.log(`Hw::configuration_changed(configuration=${JSON.stringify(configuration)});`); }
   if (typeof configuration === "undefined") {
     if (loadData("configuration", "configuration.json") === false) { return; }
   }
@@ -69,117 +78,99 @@ Hw.prototype.configuration_changed = function(configuration) {
 
 
 function wifiList(cb) {
-  if (g_debug.fun) { console.log("wifiList();"); }
-  let wifis = [
-    {"ssid":"None security Network","quality":"10/70","security":"none"},
-    {"ssid":"WPA2 Personal Network","quality":"60/70","security":"psk2"},
-    {"ssid":"WPA Personal Network","quality":"40/70","security":"psk"},
-    {"ssid":"WPA2 Ent Network","quality":"40/70","security":"wpa2"},
-    {"ssid":"WPA Ent Network","quality":"40/70","security":"wpa"},
-    {"ssid":"WEP Network","quality":"40/70","security":"wep"},
-  ];
-  if (tessel === null) { cb(null, wifis); return; }
+  if (g_debug.fun) { console.log("wifiList(cb);"); }
+  if (tessel === null) { return cb(null, fakeWifiList); }
   tessel.network.wifi.findAvailableNetworks(function (err, networks) {
-    if (err) { cb(err, null); }
-    else { cb(null, networks); }
+    if (err) { return cb(err); }
+    cb(null, networks);
   });
 }
 
-function setupWireless(user_command) {
-  user_command = user_command || false;
-  if (g_debug.fun) { console.log("setupWireless(user_command); user_command:", user_command); }
-  if (d.configuration === null) { return; }
-  if (tessel === null) { return; }
-  states.is_wifi_connected = false;
-  if (user_command) {
-    if (timers.wifi !== null) { clearInterval(timers.wifi); timers.wifi = null; }
+function clearWifiTimer() {
+  if (timers.wifi !== null) { clearTimeout(timers.wifi); timers.wifi = null; }
+}
+
+function setupTessel() {
+  if (g_debug.fun) { console.log(`setupTessel();`); }
+  if (tessel === null) return;
+  /* Wifi */
+  tessel.network.wifi.on("error", function (err) {
+    if (g_debug.events) console.log(`Event: wifi error:${err}`);
+    states.is_wifi_connected = false;
+    states.last_wifi_error = ""+err;
+    touchDBFile("configuration.json");
+    if (states.user_touched) setTimeout(enableAP, 1000);
+    else timers.wifi = setTimeout(setupWireless, hwjson.wifi_retry_timeout);
+  });
+  tessel.network.wifi.on("disconnect", function () {
+    if (g_debug.events) console.log(`Event: wifi disconnect`);
+    states.is_wifi_connected = false;
+    touchDBFile("configuration.json");
+  });
+  tessel.network.wifi.on("connect", function () {
+    if (g_debug.events) console.log(`Event: wifi connect`);
+    states.is_wifi_connected = true;
+    states.last_wifi_error = "";
+    touchDBFile("configuration.json");
+    setupLeds(1, 1, 0); /* yellow */
+    setTimeout(syncTime, 1000);
+  });
+  /* AP */
+  tessel.network.ap.on("error", function (err) {
+    if (g_debug.events) console.log(`Event: ap error:${err}`);
+    clearWifiTimer();
+    timers.wifi = setTimeout(setupWireless, hwjson.ap_retry_timeout);
+  });
+  tessel.network.ap.on("create", function (err) {
+    if (g_debug.events) console.log(`Event: ap create`);
+  });
+  tessel.network.ap.on("disable", function (err) {
+    if (g_debug.events) console.log(`Event: ap disable`);
+  });
+  tessel.network.ap.on("enable", function (err) {
+    if (g_debug.events) console.log(`Event: ap enable`);
+  });
+  tessel.network.ap.on("reset", function (err) {
+    if (g_debug.events) console.log(`Event: ap reset`);
+  });
+}
+
+function setupWireless() {
+  if (g_debug.fun) { console.log(`setupWireless();`); }
+  if (d.configuration === null) { if (g_debug.other) console.error("d.configuration is null"); return; }
+  if (tessel === null) return;
+  if (states.user_touched) clearWifiTimer();
+  if (d.configuration.wifi.enabled && d.configuration.wifi.ssid !== "") {
+    tessel.network.ap.disable(function (err) {
+      if (err) return;
+      setTimeout(function () {
+        tessel.network.wifi.connect({
+          ssid: d.configuration.wifi.ssid,
+          password: d.configuration.wifi.password,
+          security: d.configuration.wifi.security
+        }, function (err, settings) {
+          if (err) return console.error(err);
+          console.log("settings:", settings);
+        });
+      }, 1000);
+    });
   }
+  else { enableAP(); }
+}
+
+function enableAP(cb) {
+  cb = cb || function() {};
+  if (g_debug.fun) { console.log("enableAP(cb);"); }
+  if (d.configuration === null) { return cb("d.configuration is null"); }
+  if (tessel === null) { return cb(null); }
   if (d.configuration.wifi.enabled) {
-    if (d.configuration.wifi.ssid === "") {
-      setupAP();
-    }
-    else {
-      setupWifi(user_command);
-    }
+    d.configuration.wifi.enabled = false;
+    if (writeData("configuration", "configuration.json") === false)
+      if(g_debug.other) {console.error("Cannot write wifi disabled to configuration!");}
   }
-  else {
-    setupAP();
-  }
-}
-
-function setupWifi(user_command) {
-  user_command = user_command || false;
-  if (g_debug.fun) { console.log("setupWifi();"); }
-  if (d.configuration === null) { return; }
-  if (tessel === null) { return; }
-  disableAP(function(err) {
-    if (err) { return; }
-    setTimeout(function () {
-      enableWifi(user_command, function(err) {
-        if (err) { return; }
-        states.is_wifi_connected = true;
-        setupLeds(1, 1, 0); /* yellow */
-        touchDBFile("configuration.json");
-        setupWifiDisconnect();
-        setTimeout(syncTime, 500);
-      });
-    }, 500);
-  });
-}
-
-function disableAP(cb) {
-  if (g_debug.fun) { console.log("disableAP();"); }
-  if (tessel === null) { return; }
-  tessel.network.ap.disable(function (error) {
-    if (error) {
-      if(g_debug.other) {console.log(error);}
-      states.last_wifi_error = "Disable AP: " + error;
-      touchDBFile("configuration.json");
-      setupAP();
-    }
-    cb(error);
-  });
-}
-
-function enableWifi(user_command, cb) {
-  if (g_debug.fun) { console.log("enableWifi(user_command); user_command:"+user_command); }
-  if (tessel === null) { return; }
-  let options = {
-    ssid: d.configuration.wifi.ssid,
-    password: d.configuration.wifi.password,
-    security: d.configuration.wifi.security
-  };
-  tessel.network.wifi.connect(options, function (error, settings) {
-    if (error) {
-      if(g_debug.other) {console.log(error);}
-      states.last_wifi_error = "Enable Wifi: " + error;
-      touchDBFile("configuration.json");
-      if (user_command) {
-        setupAP();
-      }
-      else {
-        timers.wifi = setInterval(function(user_command) {
-          return function() {
-            enableWifi(user_command, function(){});
-          };
-        }(user_command), hwjson.wifi_retry_timeout);
-      }
-      cb(error);
-      return;
-    }
-    if (timers.wifi !== null) { clearInterval(timers.wifi); timers.wifi = null; }
-    cb(error);
-  });
-}
-
-function setupWifiDisconnect() {
-  if (g_debug.fun) { console.log("setupWifiDisconnect();"); }
-  if (tessel === null) { return; }
-  tessel.network.wifi.on("disconnect", function (settings) {
-    states.is_wifi_connected = false;
-  });
-  tessel.network.wifi.on("error", function (settings) {
-    states.is_wifi_connected = false;
+  tessel.network.wifi.disable(function (err) {
+    if (err) { return cb(err); }
+    tessel.network.ap.create({ssid: d.configuration.ap.ssid}, cb);
   });
 }
 
@@ -187,34 +178,6 @@ function syncTime() {
   if (g_debug.fun) { console.log("syncTime();"); }
   if (tessel === null) return;
   exec("ntpd -q -p 0.pool.ntp.org");
-}
-
-function setupAP() {
-  if (g_debug.fun) { console.log("setupAP();"); }
-  if (d.configuration === null) { return; }
-  if (tessel === null) { return; }
-  if (d.configuration.wifi.enabled) {
-    d.configuration.wifi.enabled = false;
-    if (writeData("configuration", "configuration.json") === false) {
-      if(g_debug.other) {console.log("Cannot set wifi enabled!");}
-    }
-  }
-  tessel.network.wifi.disable(function (error) {
-    if (error) {
-      if(g_debug.other) {console.log(error);}
-      setTimeout(setupAP, hwjson.ap_retry_timeout);
-      return;
-    }
-    tessel.network.ap.create({
-      ssid: d.configuration.ap.ssid
-    }, function (error, settings) {
-      if (error) {
-        if(g_debug.other) {console.log(error);}
-        setTimeout(setupAP, hwjson.ap_retry_timeout);
-        return;
-      }
-    });
-  });
 }
 
 function setupButtonsAndLeds() {
@@ -225,9 +188,9 @@ function setupButtonsAndLeds() {
   btn.output(1);
   setupLeds(0, 0, 0); /* black */
   timers.button = setInterval(function () {
-    btn.read(function(error, value) {
-      if (error) {
-        if(g_debug.other) {console.log(error);}
+    btn.read(function(err, value) {
+      if (err) {
+        if(g_debug.other) {console.error(err);}
         states.button_counter = 0;
         return;
       }
@@ -304,7 +267,7 @@ function buttonReleased(e) {
       d.configuration.wifi = { "enabled" : false, "ssid" : "", "password" : "", "security" : "" };
       d.configuration.ap = { "ssid" : "Tessel" };
       if (writeData("configuration", "configuration.json") === false) {
-        if(g_debug.other) {console.log("Cannot reset wireless!");}
+        if(g_debug.other) {console.error("Cannot reset wireless!");}
         return;
       }
       try {
@@ -312,7 +275,7 @@ function buttonReleased(e) {
         jsonDB.push("/password", "1234");
         jsonDB.save();
       } catch (e) {
-        if(g_debug.other) {console.log("Cannot reset password!");}
+        if(g_debug.other) {console.error("Cannot reset password!");}
         return;
       }
       setTimeout(reboot, 500);
@@ -322,11 +285,12 @@ function buttonReleased(e) {
       if(g_debug.button) {console.log("Btn released for AP/Wifi switch");}
       d.configuration.wifi.enabled = ! d.configuration.wifi.enabled;
       if (writeData("configuration", "configuration.json") === false) {
-        if(g_debug.other) {console.log("Cannot set wifi enabled!");}
+        if(g_debug.other) {console.error("Cannot set wifi enabled!");}
         return;
       }
       loadData("configuration", "configuration.json");
-      setupWireless(true);
+      states.user_touched = true;
+      setupWireless();
       break;
     }
     case "none": {
@@ -368,7 +332,7 @@ function isRoot() {
 function loadData(property, file) {
   if (g_debug.fun) { console.log("loadData("+property+","+file+")"); }
   if (dbPath === null) {
-    if (g_debug.other) {console.log("dbPath is null");} return false;
+    if (g_debug.other) {console.error("dbPath is null");} return false;
   }
   if ( ! d.hasOwnProperty(property)) {
     if(g_debug.other) {console.error("Property " + property + " is not in d!");} return false;
@@ -383,7 +347,7 @@ function loadData(property, file) {
 function writeData(property, file) {
   if (g_debug.fun) { console.log("writeData("+property+","+file+")"); }
   if (dbPath === null) {
-    if (g_debug.other) {console.log("dbPath is null");} return false;
+    if (g_debug.other) {console.error("dbPath is null");} return false;
   }
   if ( ! d.hasOwnProperty(property)) {
     if(g_debug.other) {console.error("Property " + property + " is not in d!");} return false;
@@ -398,7 +362,7 @@ function writeData(property, file) {
 
 function touchDBFile(file) {
   if (g_debug.fun) { console.log("touchDBFile("+file+")"); }
-  if (dbPath === null) { if (g_debug.other) {console.log("dbPath is null");} return false; }
+  if (dbPath === null) { if (g_debug.other) {console.error("dbPath is null");} return false; }
   touch(dbPath + "/" + file);
 }
 

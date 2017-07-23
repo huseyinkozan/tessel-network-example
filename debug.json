@@ -4,5 +4,6 @@
   "req"           : true,
   "req_timestamps": false,
   "button"        : true,
-  "other"         : true
+  "other"         : true,
+  "events"        : true
 }

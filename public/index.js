@@ -2,6 +2,7 @@
 /* eslint no-console: 0 */
 
 var g_timestamps = { configuration:0 };
+var g_scan_counter = 0;
 g_debug.configuration = true;
 g_debug.wifi_list = true;
 
@@ -20,14 +21,18 @@ $(function() {
   });
   $("#settings-save").click(function () {
     $("#segment").addClass("loading");
-    save_ap(function (err) {
-      if (err) return;
-      save_wifi(function (err) {
-        if (err) return;
-        toastr.success("Saved");
+    if ($("#settings-wifi-enabled").is(":checked"))
+      set_wifi(function (err) {
         $("#segment").removeClass("loading");
+        if (err) return toastr.error(err);
+        toastr.success("Saved");
       });
-    });
+    else
+      set_ap(function (err) {
+        $("#segment").removeClass("loading");
+        if (err) return toastr.error(err);
+        toastr.success("Saved");
+      });
   });
   g_handlers["error"] = handle_error;
   g_handlers["GetTimestamps"] = handle_timestamps;
@@ -55,6 +60,7 @@ function setup_loading(err) {
 }
 
 function handle_timestamps(ts) {
+  if (--g_scan_counter > 0) return;
   if (g_timestamps.configuration !== ts.configuration)
     get("GetConfiguration", "/configuration");
 }
@@ -115,11 +121,13 @@ window.scan_wifi = function() {
   $("#settings-wifi-ssid-dd").addClass("loading");
   $("#settings-wifi-scan").toggleClass("disabled", true);
   $("#settings-wifi-ssid-dd-menu").html("");
+  g_scan_counter = 5;
   get("GetWifiList", "/wifi_list");
   return false;
 };
 
 function handle_wifi_list(networks) {
+  g_scan_counter = 0;
   if (g_debug.wifi_list) console.log("wifi_list:", networks);
   $("#settings-wifi-ssid-dd").removeClass("loading");
   $("#settings-wifi-scan").toggleClass("disabled", false);
@@ -140,15 +148,15 @@ function handle_wifi_list(networks) {
   }, 100);
 }
 
-function save_ap(cb) {
+function set_ap(cb) {
   cb = cb || function() {};
   put("SaveAP", "/ap", { "ssid"  : $("#settings-ap-ssid").val() }, cb);
 }
 
-function save_wifi(cb) {
+function set_wifi(cb) {
   cb = cb || function() {};
   put("SaveWifi", "/wifi", {
-    "enabled"   : $("#settings-wifi-enabled").is(":checked"),
+    "enabled"   : true,
     "ssid"      : $("#settings-wifi-ssid-dd-input").val(),
     "password"  : $("#settings-wifi-password").val(),
     "security"  : $("#settings-wifi-security").val(),
