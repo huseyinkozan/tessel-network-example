@@ -69,7 +69,7 @@ Hw.prototype.setup_wireless = function() {
 };
 
 Hw.prototype.configuration_changed = function(configuration) {
-  if (g_debug.fun) { console.log(`Hw::configuration_changed(configuration=${JSON.stringify(configuration)});`); }
+  if (g_debug.fun) { console.log("Hw::configuration_changed(configuration); configuration:", configuration); }
   if (typeof configuration === "undefined") {
     if (loadData("configuration", "configuration.json") === false) { return; }
   }
@@ -91,24 +91,24 @@ function clearWifiTimer() {
 }
 
 function setupTessel() {
-  if (g_debug.fun) { console.log(`setupTessel();`); }
+  if (g_debug.fun) { console.log("setupTessel();"); }
   if (tessel === null) return;
   /* Wifi */
   tessel.network.wifi.on("error", function (err) {
-    if (g_debug.events) console.log(`Event: wifi error:${err}`);
+    if (g_debug.events) console.log("[wifi error] error:", err);
     states.is_wifi_connected = false;
     states.last_wifi_error = ""+err;
     touchDBFile("configuration.json");
     if (states.user_touched) setTimeout(enableAP, 1000);
     else timers.wifi = setTimeout(setupWireless, hwjson.wifi_retry_timeout);
   });
-  tessel.network.wifi.on("disconnect", function () {
-    if (g_debug.events) console.log(`Event: wifi disconnect`);
+  tessel.network.wifi.on("disconnect", function (settings) {
+    if (g_debug.events) console.log("[wifi disconnect] settings:", settings);
     states.is_wifi_connected = false;
     touchDBFile("configuration.json");
   });
-  tessel.network.wifi.on("connect", function () {
-    if (g_debug.events) console.log(`Event: wifi connect`);
+  tessel.network.wifi.on("connect", function (settings) {
+    if (g_debug.events) console.log("[wifi connect] settings:", settings);
     states.is_wifi_connected = true;
     states.last_wifi_error = "";
     touchDBFile("configuration.json");
@@ -117,26 +117,26 @@ function setupTessel() {
   });
   /* AP */
   tessel.network.ap.on("error", function (err) {
-    if (g_debug.events) console.log(`Event: ap error:${err}`);
+    if (g_debug.events) console.log("[ap error] error:", err);
     clearWifiTimer();
     timers.wifi = setTimeout(setupWireless, hwjson.ap_retry_timeout);
   });
-  tessel.network.ap.on("create", function (err) {
-    if (g_debug.events) console.log(`Event: ap create`);
+  tessel.network.ap.on("create", function (settings) {
+    if (g_debug.events) console.log("[ap create] settings:", settings);
   });
-  tessel.network.ap.on("disable", function (err) {
-    if (g_debug.events) console.log(`Event: ap disable`);
+  tessel.network.ap.on("disable", function (settings) {
+    if (g_debug.events) console.log("[ap disable] settings:", settings);
   });
-  tessel.network.ap.on("enable", function (err) {
-    if (g_debug.events) console.log(`Event: ap enable`);
+  tessel.network.ap.on("enable", function (settings) {
+    if (g_debug.events) console.log("[ap enable] settings:", settings);
   });
-  tessel.network.ap.on("reset", function (err) {
-    if (g_debug.events) console.log(`Event: ap reset`);
+  tessel.network.ap.on("reset", function () {
+    if (g_debug.events) console.log("[ap reset]");
   });
 }
 
 function setupWireless() {
-  if (g_debug.fun) { console.log(`setupWireless();`); }
+  if (g_debug.fun) { console.log("setupWireless();"); }
   if (d.configuration === null) { if (g_debug.other) console.error("d.configuration is null"); return; }
   if (tessel === null) return;
   if (states.user_touched) clearWifiTimer();
@@ -148,9 +148,6 @@ function setupWireless() {
           ssid: d.configuration.wifi.ssid,
           password: d.configuration.wifi.password,
           security: d.configuration.wifi.security
-        }, function (err, settings) {
-          if (err) return console.error(err);
-          console.log("settings:", settings);
         });
       }, 1000);
     });

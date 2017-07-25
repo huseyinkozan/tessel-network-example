@@ -52,6 +52,7 @@ function handle_error(err, d, apiName) {
 
 function setup_loading(err) {
   if (err) {
+    if (--g_scan_counter > 0) return;
     $("#loading-dialog").addClass("active");
     return;
   }
@@ -60,7 +61,6 @@ function setup_loading(err) {
 }
 
 function handle_timestamps(ts) {
-  if (--g_scan_counter > 0) return;
   if (g_timestamps.configuration !== ts.configuration)
     get("GetConfiguration", "/configuration");
 }

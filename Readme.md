@@ -12,6 +12,11 @@ bower install
 ```
 
 
+## Running Requirements
+
+A Tessel that have NodeJS >= 6.
+
+
 ## Run at Tessel
 
 ```
