@@ -156,7 +156,6 @@ function set_ap(cb) {
 function set_wifi(cb) {
   cb = cb || function() {};
   put("SaveWifi", "/wifi", {
-    "enabled"   : true,
     "ssid"      : $("#settings-wifi-ssid-dd-input").val(),
     "password"  : $("#settings-wifi-password").val(),
     "security"  : $("#settings-wifi-security").val(),

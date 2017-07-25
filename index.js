@@ -73,10 +73,6 @@ app.put("/api/wifi", function(req, res) {
       res.status(500).send({"error":"Not an object:" + req.body});
       return;
     }
-    if (typeof req.body.enabled === "undefined") {
-      res.status(500).send({"error":"Missing required field enabled : " + req.body});
-      return;
-    }
     if (typeof req.body.ssid === "undefined") {
       res.status(500).send({"error":"Missing required field ssid : " + req.body});
       return;
@@ -90,8 +86,8 @@ app.put("/api/wifi", function(req, res) {
       return;
     }
     var jsonDB = new JsonDB(req.app.locals.dbPath+"/configuration.json", false, true);
+    req.body.enabled = true;
     jsonDB.push("/wifi", req.body);
-    jsonDB.push("/wifi/enabled", true);
     jsonDB.save();
     var config = jsonDB.getData("/");
     hw.configuration_changed(config);
